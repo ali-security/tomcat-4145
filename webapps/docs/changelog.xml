@@ -2498,6 +2498,10 @@
         rather than private to help users wishing to customise the default
         work directory behaviour. (markt)
       </scode>
+      <fix>
+         Fix handling of <code>QSA</code> and <code>QSD</code> flags in
+        <code>RewriteValve</code>. (markt)
+      </fix>
     </changelog>
   </subsection>
   <subsection name="Coyote">
