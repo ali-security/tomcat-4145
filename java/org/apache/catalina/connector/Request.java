@@ -481,8 +481,9 @@ public class Request implements HttpServletRequest {
             for (Part part: parts) {
                 try {
                     part.delete();
-                } catch (IOException ignored) {
-                    // ApplicationPart.delete() never throws an IOEx
+                } catch (Throwable t) {
+                    ExceptionUtils.handleThrowable(t);
+                    log.warn(sm.getString("coyoteRequest.deletePartFailed", part.getName()), t);
                 }
             }
             parts = null;
@@ -535,8 +536,8 @@ public class Request implements HttpServletRequest {
         asyncSupported = null;
         if (asyncContext!=null) {
             asyncContext.recycle();
+            asyncContext = null;
         }
-        asyncContext = null;
     }
 
 
@@ -2872,8 +2873,9 @@ public class Request implements HttpServletRequest {
             }
         }
 
+        int maxParameterCount = getConnector().getMaxParameterCount();
         Parameters parameters = coyoteRequest.getParameters();
-        parameters.setLimit(getConnector().getMaxParameterCount());
+        parameters.setLimit(maxParameterCount);
 
         boolean success = false;
         try {
@@ -2925,6 +2927,13 @@ public class Request implements HttpServletRequest {
             upload.setFileItemFactory(factory);
             upload.setFileSizeMax(mce.getMaxFileSize());
             upload.setSizeMax(mce.getMaxRequestSize());
+            if (maxParameterCount > -1) {
+                // There is a limit. The limit for parts needs to be reduced by
+                // the number of parameters we have already parsed.
+                // Must be under the limit else parsing parameters would have
+                // triggered an exception.
+                upload.setFileCountMax(maxParameterCount - parameters.size());
+            }
 
             parts = new ArrayList<>();
             try {
